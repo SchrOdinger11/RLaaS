@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	redisClient "github.com/SchrOdinger11/RLaaS/redis"
 )
@@ -43,4 +44,45 @@ func ConfigureHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Configuration updated"))
+}
+
+// BucketConfig represents the configuration for the token bucket.
+type BucketConfig struct {
+	Capacity     int `json:"capacity"`      // Maximum tokens available.
+	RefillRate   int `json:"refill_rate"`   // Tokens added per second.
+	RefillWindow int `json:"refill_window"` // Refill interval in seconds (typically 1).
+}
+
+// ConfigureBucketHandler allows clients to set their token bucket configuration.
+func ConfigureBucketHandler(w http.ResponseWriter, r *http.Request) {
+	apiKey := r.Header.Get("X-API-Key")
+	if apiKey == "" {
+		http.Error(w, "API key required", http.StatusUnauthorized)
+		return
+	}
+
+	var config BucketConfig
+	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	Ctx := context.Background()
+
+	// Store configuration in Redis under the key "bucket:<apiKey>"
+	client := redisClient.GetClient("localhost:6379")
+	key := "bucket:" + apiKey
+	_, err := client.HSet(Ctx, key, map[string]interface{}{
+		"tokens":        config.Capacity, // initialize with full capacity
+		"capacity":      config.Capacity,
+		"last_refill":   time.Now().Unix(),
+		"refill_rate":   config.RefillRate,
+		"refill_window": config.RefillWindow,
+	}).Result()
+	if err != nil {
+		http.Error(w, "Failed to save bucket config", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Bucket configuration updated"))
 }
