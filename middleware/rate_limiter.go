@@ -4,24 +4,52 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/SchrOdinger11/RLaaS/redis"
 )
 
 // RateLimiter holds our rate limiting configuration and Redis client.
+// DefaultLimit and DefaultWindow are used if no dynamic configuration is found.
 type RateLimiter struct {
-	RedisClient *redis.Client
-	Limit       int           // Maximum allowed requests per window
-	Window      time.Duration // Duration of the window (e.g., 1 minute)
+	RedisClient   *redis.Client
+	DefaultLimit  int           // Default maximum allowed requests per window
+	DefaultWindow time.Duration // Default duration of the window (e.g., 1 minute)
+}
+
+// fetchConfig checks Redis for a per-API-key configuration.
+// It returns limit and window (in seconds). If none is found, it returns default values.
+func (rl *RateLimiter) fetchConfig(apiKey string) (int, int, error) {
+	ctx := context.Background()
+	key := "config:" + apiKey
+	configMap, err := rl.RedisClient.HGetAll(ctx, key).Result()
+	if err != nil {
+		return rl.DefaultLimit, int(rl.DefaultWindow.Seconds()), err
+	}
+	// If no configuration is set, return defaults.
+	if len(configMap) == 0 {
+		return rl.DefaultLimit, int(rl.DefaultWindow.Seconds()), nil
+	}
+	limit, err := strconv.Atoi(configMap["limit"])
+	if err != nil {
+		return rl.DefaultLimit, int(rl.DefaultWindow.Seconds()), err
+	}
+	window, err := strconv.Atoi(configMap["window"])
+	if err != nil {
+		return rl.DefaultLimit, int(rl.DefaultWindow.Seconds()), err
+	}
+	return limit, window, nil
 }
 
 // Allow checks if the client identified by apiKey is allowed to make a request.
-// It implements a fixed window counter using Redis.
+// It uses dynamic configuration if available, otherwise falls back to defaults.
 func (rl *RateLimiter) Allow(apiKey string) (bool, error) {
 	ctx := context.Background()
+	// Get dynamic configuration for the API key.
+	limit, windowSeconds, _ := rl.fetchConfig(apiKey)
 	now := time.Now().Unix()
-	windowStart := now - (now % int64(rl.Window.Seconds()))
+	windowStart := now - (now % int64(windowSeconds))
 	key := fmt.Sprintf("rate:%s:%d", apiKey, windowStart)
 
 	// Get current request count from Redis.
@@ -31,14 +59,14 @@ func (rl *RateLimiter) Allow(apiKey string) (bool, error) {
 	}
 
 	// If count exceeds limit, block the request.
-	if count >= rl.Limit {
+	if count >= limit {
 		return false, nil
 	}
 
 	// Use a Redis transaction (pipeline) to increment and set expiration.
 	pipe := rl.RedisClient.TxPipeline()
 	pipe.Incr(ctx, key)
-	pipe.Expire(ctx, key, rl.Window)
+	pipe.Expire(ctx, key, time.Duration(windowSeconds)*time.Second)
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		return false, err

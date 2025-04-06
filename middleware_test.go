@@ -16,9 +16,9 @@ func TestRateLimiterMiddleware(t *testing.T) {
 	// Initialize a test Redis client (or use a mock Redis).
 	client := redisClient.GetClient("localhost:6379")
 	limiter := &middleware.RateLimiter{
-		RedisClient: client,
-		Limit:       2, // set a low limit for testing
-		Window:      time.Minute,
+		RedisClient:   client,
+		DefaultLimit:  2, // set a low limit for testing
+		DefaultWindow: time.Minute,
 	}
 
 	// Create a request with an API key.

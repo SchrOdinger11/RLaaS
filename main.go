@@ -17,9 +17,9 @@ func main() {
 
 	// Set up the rate limiter: for example, 100 requests per minute.
 	limiter := &middleware.RateLimiter{
-		RedisClient: client,
-		Limit:       5,
-		Window:      time.Minute,
+		RedisClient:   client,
+		DefaultLimit:  5,
+		DefaultWindow: time.Minute,
 	}
 
 	// Set up HTTP server and endpoints.
