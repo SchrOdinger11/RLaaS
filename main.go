@@ -27,7 +27,8 @@ func main() {
 	checkHandler := http.HandlerFunc(handlers.CheckHandler)
 	// Wrap the /check endpoint with our rate limiter middleware.
 	mux.Handle("/check", limiter.Middleware(checkHandler))
-
+	mux.HandleFunc("/configure", handlers.ConfigureHandler)
+	mux.HandleFunc("/usage", handlers.UsageHandler)
 	log.Println("RLaaS service starting on :8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatal(err)
