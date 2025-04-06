@@ -1,1 +1,2 @@
-RLaaS: Rate Limiter As a Service!
+# RLaaS
+RateLimiter As a service!
