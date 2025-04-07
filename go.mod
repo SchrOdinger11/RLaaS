@@ -1,7 +1,7 @@
 module github.com/SchrOdinger11/RLaaS
 
 
-go 1.24.2
+go 1.23
 
 require github.com/go-redis/redis/v8 v8.11.5
 
