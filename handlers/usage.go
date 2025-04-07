@@ -29,7 +29,7 @@ func UsageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve configuration from Redis.
-	client := redisClient.GetClient("localhost:6379")
+	client := redisClient.InitClient()
 	configKey := "config:" + apiKey
 	configMap, err := client.HGetAll(Ctx, configKey).Result()
 	if err != nil || len(configMap) == 0 {
@@ -92,7 +92,7 @@ func TokenBucketUsageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.Background()
-	client := redisClient.GetClient("localhost:6379")
+	client := redisClient.InitClient()
 	key := "bucket:" + apiKey
 
 	result, err := client.HGetAll(ctx, key).Result()

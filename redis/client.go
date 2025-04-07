@@ -1,31 +1,46 @@
+// In redis/client.go
 package redis
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"sync"
 
 	redispkg "github.com/go-redis/redis/v8"
 )
 
-// Client is an alias for the Redis client from github.com/go-redis/redis/v8.
-type Client = redispkg.Client
-
 var (
-	ctx    = context.Background()
-	client *Client
+	Ctx    = context.Background()
+	client *redispkg.Client
 	once   sync.Once
 )
 
-// Nil re-exports the external Redis Nil error for use in other packages.
+type Client = redispkg.Client
+
+// Nil re-exports the external Redis Nil error.
 const Nil = redispkg.Nil
 
-// GetClient returns a singleton Redis client instance.
-// It creates the client only once, even if called multiple times.
-func GetClient(addr string) *Client {
+// InitClient initializes the Redis client with the given host and port from environment variables.
+func InitClient() *redispkg.Client {
 	once.Do(func() {
+		host := os.Getenv("REDIS_HOST")
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		port := os.Getenv("REDIS_PORT")
+		if port == "" {
+			port = "6379"
+		}
+		addr := fmt.Sprintf("%s:%s", host, port)
 		client = redispkg.NewClient(&redispkg.Options{
-			Addr: addr, // e.g., "localhost:6379"
+			Addr: addr,
 		})
 	})
+	return client
+}
+
+// GetClient returns the singleton Redis client.
+func GetClient() *redispkg.Client {
 	return client
 }

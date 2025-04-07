@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// Initialize the Redis client.
-	client := redisClient.GetClient("localhost:6379")
+	client := redisClient.InitClient()
 
 	// Set up the rate limiter: for example, 100 requests per minute.
 	// limiter := &middleware.RateLimiter{

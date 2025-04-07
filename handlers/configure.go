@@ -31,7 +31,7 @@ func ConfigureHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store configuration in Redis using a hash key "config:<apiKey>"
-	client := redisClient.GetClient("localhost:6379")
+	client := redisClient.InitClient()
 	key := "config:" + apiKey
 	_, err := client.HSet(ctx, key, map[string]interface{}{
 		"limit":  config.Limit,
@@ -69,7 +69,7 @@ func ConfigureBucketHandler(w http.ResponseWriter, r *http.Request) {
 	Ctx := context.Background()
 
 	// Store configuration in Redis under the key "bucket:<apiKey>"
-	client := redisClient.GetClient("localhost:6379")
+	client := redisClient.InitClient()
 	key := "bucket:" + apiKey
 	_, err := client.HSet(Ctx, key, map[string]interface{}{
 		"tokens":        config.Capacity, // initialize with full capacity
