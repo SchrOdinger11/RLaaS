@@ -1,5 +1,5 @@
 # Stage 1: Build the Go application.
-FROM golang:1.23-alpine as builder
+FROM public.ecr.aws/docker/library/golang:1.23-alpine as builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
